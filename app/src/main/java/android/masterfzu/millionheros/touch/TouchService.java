@@ -11,6 +11,7 @@ import android.masterfzu.millionheros.R;
 import android.masterfzu.millionheros.TheApp;
 import android.masterfzu.millionheros.hint.BaiduSearch;
 import android.masterfzu.millionheros.util.Counter;
+import android.masterfzu.millionheros.util.StringUtil;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
@@ -24,14 +25,15 @@ import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.WebView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -57,6 +59,7 @@ public class TouchService extends Service {
     LinearLayout hintlayout;
 
     TextView hintView;
+    WebView hintWeb;
 
     private static int mResultCode = 0;
     private static Intent mResultData = null;
@@ -82,9 +85,22 @@ public class TouchService extends Service {
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            String t = msg.getData().getString("toast");
+            if (!StringUtil.isEmpty(t)) {
+                Toast toast = Toast.makeText(TouchService.this, t, Toast.LENGTH_SHORT);
+                toast.setGravity(Gravity.CENTER, 0, 0);
+                toast.show();
+            }
+
+            String path = msg.getData().getString("path");
+            if (!StringUtil.isEmpty(path)) {
+                hintWeb.loadUrl(path);
+                return;
+            }
+
             String result = msg.getData().getString("result");
-            hintView.setText(result);
-//            hintView.loadData(result, "text/html; charset=UTF-8", null);
+//            hintView.setText(result);
+            hintWeb.loadDataWithBaseURL(null, result,"text/html; charset=UTF-8", "utf-8", null);
         }
     };
 
@@ -237,7 +253,7 @@ public class TouchService extends Service {
 
         //设置悬浮窗口长宽数据.
         params.width = windowWidth;
-        params.height = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, 500, this.getResources().getDisplayMetrics());
+        params.height = this.getResources().getDimensionPixelSize(R.dimen.hint_layout_height);
 
         LayoutInflater inflater = LayoutInflater.from(getApplication());
         //获取浮动窗口视图所在布局.
@@ -246,14 +262,11 @@ public class TouchService extends Service {
         windowManager.addView(hintlayout, params);
 
         hintView = hintlayout.findViewById(R.id.hintText);
-//        hintView.getSettings().setDefaultTextEncodingName("UTF-8");
-        hintlayout.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                stopSelf();
-                return true;
-            }
-        });
+
+        hintWeb = hintlayout.findViewById(R.id.hintWeb);
+        hintWeb.getSettings().setDefaultTextEncodingName("UTF-8");
+        hintWeb.getSettings().setJavaScriptEnabled(true);
+//        hintWeb.getSettings().setUseWideViewPort(true);
 
         hintlayout.findViewById(R.id.add).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -264,12 +277,12 @@ public class TouchService extends Service {
         hintlayout.findViewById(R.id.remove).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                removeLine();
+                onQuit();
             }
         });
 
-//        hintView.loadData("### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线", "text/html", "UTF-8");
-        hintView.setText("### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线  \n\nPS：不可能/不属于/不是的问题选无匹配的答案~~");
+        hintWeb.loadDataWithBaseURL(null,"### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线", "text/html", "UTF-8", null);
+//        hintView.setText("### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线  \n\nPS：不可能/不属于/不是的问题选无匹配的答案~~");
     }
 
     private void addUpHintLine() {
@@ -310,12 +323,17 @@ public class TouchService extends Service {
         });
     }
 
-    public void onAddLine() {
-        if (upLine != null)
-            return;
+    private void onAddLine() {
+        if (upLine == null) {
+            addUpHintLine();
+            addDownHintLine();
+        } else {
+            removeLine();
+        }
+    }
 
-        addUpHintLine();
-        addDownHintLine();
+    private void onQuit() {
+        stopSelf();
     }
 
     private void addDownHintLine() {
@@ -381,7 +399,7 @@ public class TouchService extends Service {
         bitmap = Bitmap.createBitmap(bitmap, 100, mYUPLINE + statusBarHeight + hintLineHeight, 900, mYDONWLINE - mYUPLINE - hintLineHeight);
         image.close();
         Log.i(TAG, "image data captured");
-        saveToSD(bitmap);
+//        saveToSD(bitmap);
         return convertToByte(bitmap);
 //        makeToast("截屏完成耗时" + Counter.spendS("startCapture") + "s，保存路径：" + fileImage.getAbsolutePath());
     }

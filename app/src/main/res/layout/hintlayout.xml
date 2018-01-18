@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="@dimen/hint_layout_height"
     android:background="#c5000000"
@@ -14,7 +13,15 @@
         android:padding="10dp"
         android:textColor="@android:color/white"
         android:textSize="15sp"
-        tools:text="@string/tools_hint" />
+        android:visibility="gone"/>
+
+    <WebView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:id="@+id/hintWeb"
+        />
+
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -26,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:text="开启标线">
+            android:text="标线开关">
 
         </Button>
 
@@ -35,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:text="关闭标线">
+            android:text="退出">
 
         </Button>
     </LinearLayout>
