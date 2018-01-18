@@ -1,0 +1,4 @@
+<resources>
+    <dimen name="hint_layout_height">500dp</dimen>
+    <dimen name="hint_line_height">20dp</dimen>
+</resources>
