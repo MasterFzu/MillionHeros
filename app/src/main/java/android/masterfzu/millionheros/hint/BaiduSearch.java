@@ -5,7 +5,6 @@ import android.masterfzu.millionheros.baiduocr.BaiduOCR;
 import android.masterfzu.millionheros.util.StringUtil;
 import android.os.Handler;
 import android.os.Message;
-import android.text.Html;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -46,10 +45,14 @@ public class BaiduSearch {
                     makeMessage(handler, "识图成功，问题是：\n" + qa.getQuestion() + "\n 请等待提示……");
 
                     ResultSum rs = searchResult(qa);
-                    String result = prettyOut(qa, rs);
-                    Log.w("search", result);
+                    makeHint(handler, rs.path);
 
-                    makeMessage(handler, result);
+                    makeToastIfCatch(handler, qa, rs);
+
+//                    String result = prettyOut(qa, rs);
+//                    Log.w("search", result);
+//
+//                    makeMessage(handler, result);
                 } catch (IOException e) {
                     e.printStackTrace();
                     makeMessage(handler, "Something Error!!!");
@@ -59,15 +62,54 @@ public class BaiduSearch {
 
     }
 
+    private static void makeToastIfCatch(Handler handler, QandA qa, ResultSum rs) {
+        int index = getBigone(rs.sum);
+        if (index != -1) {
+            makeToast(handler, "命中最多：" + qa.getAns()[index]);
+            return;
+        }
+
+        index = getZeroone(rs.sum);
+        if (index != -1) {
+            makeToast(handler, "唯一未出现：" + qa.getAns()[index]);
+        }
+    }
+
+    private static int getZeroone(int[] sum) {
+        int index = -1, count = -1;
+        for (int i = 0; i < sum.length; i ++) {
+            if (sum[i] <= 0 ) {
+                index = i;
+                count++;
+            }
+            if (count >= 1)
+                return -1;
+        }
+
+        return index;
+    }
+
     private static void makeMessage(Handler handler, String s) {
         Message m = handler.obtainMessage();
         m.getData().putString("result", s);
         handler.sendMessage(m);
     }
 
+    private static void makeHint(Handler handler, String path) {
+        Message m = handler.obtainMessage();
+        m.getData().putString("path", path);
+        handler.sendMessage(m);
+    }
+
+    private static void makeToast(Handler handler, String t) {
+        Message m = handler.obtainMessage();
+        m.getData().putString("toast", t);
+        handler.sendMessage(m);
+    }
+
     static ResultSum searchResult(QandA qa) throws IOException {
         ResultSum rs = new ResultSum(qa);
-        String path = "http://m.baidu.com/s?from=100925f&word=" + URLEncoder.encode(qa.getQuestion(), "UTF-8");
+        String path = "http://m.baidu.com/s?word=" + URLEncoder.encode(qa.getQuestion(), "UTF-8");
         rs.path = path;
         String line = "";
         Log.w("BaiduSearch", path);
