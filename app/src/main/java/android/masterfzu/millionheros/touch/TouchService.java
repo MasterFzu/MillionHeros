@@ -9,7 +9,9 @@ import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.masterfzu.millionheros.R;
 import android.masterfzu.millionheros.TheApp;
+import android.masterfzu.millionheros.baiduocr.BaiduOCR;
 import android.masterfzu.millionheros.hint.BaiduSearch;
+import android.masterfzu.millionheros.hint.QandA;
 import android.masterfzu.millionheros.util.Counter;
 import android.masterfzu.millionheros.util.StringUtil;
 import android.media.Image;
@@ -31,15 +33,25 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.List;
+
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Scheduler;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * 主要业务流程
@@ -49,12 +61,12 @@ public class TouchService extends Service {
     private static final String TAG = "TouchService";
     public static final int TOUCHER_WID = 200;
     public static final int TOUCHER_HEI = 200;
-    public static int mYUPLINE = 266;
+    public static int mYUPLINE = 243;
     public static int mYDONWLINE = 1159;
 
     ConstraintLayout toucherLayout;
-    LinearLayout upLine, downLine;
-    WindowManager.LayoutParams params, upLineP, downLineP;
+    LinearLayout upLine, downLine, topLayout;
+    WindowManager.LayoutParams params, upLineP, downLineP, hintLayoutParams;
     WindowManager windowManager;
     LinearLayout hintlayout;
 
@@ -68,6 +80,7 @@ public class TouchService extends Service {
     private String strDate = null;
     private String pathImage = null;
     private String nameImage = null;
+    private String findWd = "";
 
     private MediaProjection mMediaProjection = null;
     private VirtualDisplay mVirtualDisplay = null;
@@ -85,12 +98,12 @@ public class TouchService extends Service {
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            String t = msg.getData().getString("toast");
-            if (!StringUtil.isEmpty(t)) {
-                Toast toast = Toast.makeText(TouchService.this, t, Toast.LENGTH_SHORT);
-                toast.setGravity(Gravity.CENTER, 0, 0);
-                toast.show();
-            }
+//            String t = msg.getData().getString("toast");
+//            if (!StringUtil.isEmpty(t)) {
+//                Toast toast = Toast.makeText(TouchService.this, t, Toast.LENGTH_SHORT);
+//                toast.setGravity(Gravity.CENTER, 0, 0);
+//                toast.show();
+//            }
 
             String path = msg.getData().getString("path");
             if (!StringUtil.isEmpty(path)) {
@@ -99,8 +112,9 @@ public class TouchService extends Service {
             }
 
             String result = msg.getData().getString("result");
-//            hintView.setText(result);
-            hintWeb.loadDataWithBaseURL(null, result,"text/html; charset=UTF-8", "utf-8", null);
+            hintView.setText(result);
+            findWd = msg.getData().getString("ans");
+//            hintWeb.loadDataWithBaseURL(null, result,"text/html; charset=UTF-8", "utf-8", null);
         }
     };
 
@@ -118,10 +132,52 @@ public class TouchService extends Service {
 
         setUpMediaProjection();
         createVirtualEnvironment();
+
+        addHintLayout();
         addUpHintLine();
         addDownHintLine();
-        addHintLayout();
-        addToucher();
+//        addToucher();
+        addToplayout();
+    }
+
+    private void addToplayout() {
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        params.format = PixelFormat.RGBA_8888;
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+
+        params.gravity = Gravity.TOP;
+        params.x = 0;
+        params.y = 0;
+
+        //设置悬浮窗口长宽数据.
+        params.width = windowWidth;
+        params.height = this.getResources().getDimensionPixelSize(R.dimen.top_layout_height);
+
+        LayoutInflater inflater = LayoutInflater.from(getApplication());
+        //获取浮动窗口视图所在布局.
+        topLayout = (LinearLayout) inflater.inflate(R.layout.toplayout, null);
+
+        windowManager.addView(topLayout, params);
+        topLayout.findViewById(R.id.add).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onAddLine();
+            }
+        });
+        topLayout.findViewById(R.id.cap).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                showMe();
+                rxAction();
+            }
+        });
+        topLayout.findViewById(R.id.remove).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopSelf();
+            }
+        });
     }
 
     public void setUpMediaProjection(){
@@ -206,7 +262,8 @@ public class TouchService extends Service {
         toucherLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showMe();
+//                showMe();
+                rxAction();
             }
 
         });
@@ -224,6 +281,69 @@ public class TouchService extends Service {
         });
     }
 
+    private void rxAction() {
+        final String c = "rxAction";
+        Counter.letsgo(c);
+        Observable.just(getCapture()) // 截图
+                .map(new Function<byte[], String>() {
+                    @Override
+                    public String apply(byte[] bytes) throws Exception {
+                        Log.e("RXACTION", "map-ocr, " + Thread.currentThread().getName());
+                        String result =  BaiduOCR.doOCR(bytes); // 百度识图
+                        return result;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) throws Exception {
+                        Log.e("RXACTION", "do-ocr, " + Thread.currentThread().getName());
+                        hintView.setText("识图，" + Counter.spendS(c));
+                    }
+                })
+                .map(new Function<String, QandA>() {
+                    @Override
+                    public QandA apply(String s) throws Exception {
+                        Log.e("RXACTION", "map-qanda, " + Thread.currentThread().getName());
+                        return QandA.format(s); // 分析结果
+                    }
+                })
+                .doOnNext(new Consumer<QandA>() {
+                    @Override
+                    public void accept(QandA qandA) throws Exception {
+                        Log.e("RXACTION", "do-qanda, " + Thread.currentThread().getName());
+                        hintView.setText("找问题，" + Counter.spendS(c));
+                    }
+                })
+                .observeOn(Schedulers.io())
+                .map(new Function<QandA, BaiduSearch.ResultSum>() {
+                    @Override
+                    public BaiduSearch.ResultSum apply(QandA qandA) throws Exception {
+                        Log.e("RXACTION", "map-search, " + Thread.currentThread().getName());
+                        return BaiduSearch.searchResult(qandA); // 百度搜索
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<BaiduSearch.ResultSum>() {
+                    @Override
+                    public void accept(BaiduSearch.ResultSum resultSum) throws Exception {
+                        Log.e("RXACTION", "sub-accept, " + Thread.currentThread().getName());
+                        hintWeb.loadUrl(resultSum.path);
+                        hintView.setText("完成！" + Counter.spendS(c));
+                        hintView.setText(BaiduSearch.getHintIfCatch(resultSum));
+//                        hintView.setText("识图成功!!!");
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        Log.e("RXACTION", "sub-error, " + Thread.currentThread().getName());
+                        hintView.setText("失败！" + Counter.spendS(c));
+                        Log.e("RXJAVA", throwable.getMessage());
+                    }
+                });
+    }
+
     private void showMe() {
         final byte [] img = getCapture();
 
@@ -238,51 +358,58 @@ public class TouchService extends Service {
 
     private void addHintLayout() {
         //赋值WindowManager&LayoutParam.
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        hintLayoutParams = new WindowManager.LayoutParams();
         //设置type.系统提示型窗口，一般都在应用程序窗口之上.
-        params.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        hintLayoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
         //设置效果为背景透明.
-        params.format = PixelFormat.RGBA_8888;
+        hintLayoutParams.format = PixelFormat.RGBA_8888;
         //设置flags.不可聚焦及不可使用按钮对悬浮窗进行操控.
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        hintLayoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
 
         //设置窗口初始停靠位置.
-        params.gravity = Gravity.BOTTOM;
+        hintLayoutParams.gravity = Gravity.BOTTOM;
 //        params.x = 0;
 //        params.y = 0;
 
         //设置悬浮窗口长宽数据.
-        params.width = windowWidth;
-        params.height = this.getResources().getDimensionPixelSize(R.dimen.hint_layout_height);
+        hintLayoutParams.width = windowWidth;
+        hintLayoutParams.height = windowHeight - mYDONWLINE - statusBarHeight - this.getResources().getDimensionPixelSize(R.dimen.hint_line_height);
 
         LayoutInflater inflater = LayoutInflater.from(getApplication());
         //获取浮动窗口视图所在布局.
         hintlayout = (LinearLayout) inflater.inflate(R.layout.hintlayout, null);
         //添加toucherlayout
-        windowManager.addView(hintlayout, params);
+        windowManager.addView(hintlayout, hintLayoutParams);
 
-        hintView = hintlayout.findViewById(R.id.hintText);
+        hintView = hintlayout.findViewById(R.id.hintBottomText);
 
         hintWeb = hintlayout.findViewById(R.id.hintWeb);
         hintWeb.getSettings().setDefaultTextEncodingName("UTF-8");
         hintWeb.getSettings().setJavaScriptEnabled(true);
+        hintWeb.getSettings().setDomStorageEnabled(true);
+        hintWeb.getSettings().setTextZoom(75);
+//        hintWeb.getSettings().setBlockNetworkImage(true);
+        hintWeb.setWebViewClient(new WebViewClient() {
+            //覆盖shouldOverrideUrlLoading 方法
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                view.loadUrl(url);
+                return false;
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (!StringUtil.isEmpty(findWd)) {
+                    view.clearMatches();
+                    view.findAllAsync(findWd);
+                }
+            }
+        });
 //        hintWeb.getSettings().setUseWideViewPort(true);
-
-        hintlayout.findViewById(R.id.add).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onAddLine();
-            }
-        });
-        hintlayout.findViewById(R.id.remove).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onQuit();
-            }
-        });
-
-        hintWeb.loadDataWithBaseURL(null,"### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线", "text/html", "UTF-8", null);
-//        hintView.setText("### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线  \n\nPS：不可能/不属于/不是的问题选无匹配的答案~~");
+        hintWeb.loadUrl("http://m.baidu.com/s?from=100925f");
+//        hintWeb.loadDataWithBaseURL(null,"### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线", "text/html", "UTF-8", null);
+        hintView.setText("# 移动标线确保上下两条线内只有问题与答案 #");
     }
 
     private void addUpHintLine() {
@@ -303,7 +430,7 @@ public class TouchService extends Service {
         //获取浮动窗口视图所在布局.
         upLine = (LinearLayout) inflater.inflate(R.layout.hintline, null);
         final TextView hintLineText = upLine.findViewById(R.id.hintLineText);
-        hintLineText.setText("------------------ " + mYUPLINE + " ------------------");
+        hintLineText.setText("--------------- 镖姬线 " + mYUPLINE + " ------------------");
 
         //添加toucherlayout
         windowManager.addView(upLine, upLineP);
@@ -315,7 +442,7 @@ public class TouchService extends Service {
 //                    upLineP.x = (int) event.getRawX();
                     upLineP.y = (int) event.getRawY();
                     mYUPLINE = upLineP.y - statusBarHeight;
-                    hintLineText.setText("------------------ " + mYUPLINE + " ------------------");
+                    hintLineText.setText("--------------- 镖姬线 " + mYUPLINE + " ------------------");
                     windowManager.updateViewLayout(upLine, upLineP);
                 }
                 return false;
@@ -332,9 +459,6 @@ public class TouchService extends Service {
         }
     }
 
-    private void onQuit() {
-        stopSelf();
-    }
 
     private void addDownHintLine() {
         downLineP = new WindowManager.LayoutParams();
@@ -352,7 +476,7 @@ public class TouchService extends Service {
         LayoutInflater inflater = LayoutInflater.from(getApplication());
         downLine = (LinearLayout) inflater.inflate(R.layout.hintline, null);
         final TextView hintLineText = downLine.findViewById(R.id.hintLineText);
-        hintLineText.setText("------------------ " + mYDONWLINE + " ------------------");
+        hintLineText.setText("--------------- 镖姬线 " + mYDONWLINE + " ------------------");
 
         windowManager.addView(downLine, downLineP);
 
@@ -363,8 +487,10 @@ public class TouchService extends Service {
 //                    downLineP.x = (int) event.getRawX();
                     downLineP.y = (int) event.getRawY();
                     mYDONWLINE = downLineP.y - statusBarHeight;
-                    hintLineText.setText("------------------ " + mYDONWLINE + " ------------------");
+                    hintLineText.setText("--------------- 镖姬线 " + mYDONWLINE + " ------------------");
                     windowManager.updateViewLayout(downLine, downLineP);
+                    hintLayoutParams.height = windowHeight - mYDONWLINE - statusBarHeight - downLineP.height;
+                    windowManager.updateViewLayout(hintlayout, hintLayoutParams);
                 }
                 return false;
             }
@@ -446,6 +572,9 @@ public class TouchService extends Service {
         }
         if (hintlayout != null) {
             windowManager.removeView(hintlayout);
+        }
+        if (topLayout != null) {
+            windowManager.removeView(topLayout);
         }
 
         removeLine();

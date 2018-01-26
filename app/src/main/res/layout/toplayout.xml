@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/top_layout_height"
+    android:background="@color/color_background"
+    android:orientation="horizontal">
+
+    <Button
+        android:id="@+id/add"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_weight="1"
+        android:text="标线开关">
+
+    </Button>
+
+    <Button
+        android:id="@+id/cap"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_weight="1"
+        android:text="截屏">
+    </Button>
+
+    <Button
+        android:id="@+id/remove"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_weight="1"
+        android:text="退出">
+    </Button>
+
+</LinearLayout>

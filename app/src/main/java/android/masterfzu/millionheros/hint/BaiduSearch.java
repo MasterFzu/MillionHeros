@@ -31,21 +31,21 @@ public class BaiduSearch {
 
                     String s = BaiduOCR.doOCR(img);
                     if (StringUtil.isEmpty(s)) {
-                        makeMessage(handler, "!!!!!!识图失败，马上重试!!!!!");
+                        makeMessage(handler, "!!!识图失败，马上重试!!!");
                         return;
                     }
 
                     QandA qa = QandA.format(s);
 
                     if (qa == null) {
-                        makeMessage(handler, "!!!!!!无法识别问题，可以尝试重试!!!!!");
+                        makeMessage(handler, "!!!无法识别问题，可以尝试重试!!!");
                         return;
                     }
 
-                    makeMessage(handler, "识图成功，问题是：\n" + qa.getQuestion() + "\n 请等待提示……");
+                    makeMessage(handler, "识图成功，问题：" + qa.getQuestion());
 
                     ResultSum rs = searchResult(qa);
-                    makeHint(handler, rs.path);
+                    makeHint(handler, rs.path, qa.getAns());
 
                     makeToastIfCatch(handler, qa, rs);
 
@@ -62,20 +62,64 @@ public class BaiduSearch {
 
     }
 
-    private static void makeToastIfCatch(Handler handler, QandA qa, ResultSum rs) {
-        int index = getBigone(rs.sum);
+    public static boolean allZero(int [] sum) {
+        boolean allzero = true; //是否无精确匹配
+        for (int i : sum) {
+            if (i != 0) {
+                allzero = false;
+                break;
+            }
+        }
+
+        return allzero;
+    }
+
+    public static String getHintIfCatch(ResultSum rs) {
+        boolean allzero = allZero(rs.sum);
+
+        if (allzero) {
+            return "无辅助提示！";
+        }
+
+        int index = getZeroone(rs.sum);
         if (index != -1) {
-            makeToast(handler, "命中最多：" + qa.getAns()[index]);
+            return "唯一未出现：" + rs.ans[index];
+        }
+
+        index = getBigone(rs.sum);
+        if (index != -1) {
+            return "命中最多：" + rs.ans[index];
+        }
+
+        return "无辅助提示！";
+    }
+
+    private static void makeToastIfCatch(Handler handler, QandA qa, ResultSum rs) {
+        boolean allzero = allZero(rs.sum);
+
+        if (allzero) {
+            makeMessage(handler, "无辅助提示！");
             return;
         }
 
-        index = getZeroone(rs.sum);
+
+        int index = getZeroone(rs.sum);
         if (index != -1) {
-            makeToast(handler, "唯一未出现：" + qa.getAns()[index]);
+            makeAnswer(handler, "唯一未出现：" + qa.getAns()[index], qa.getAns()[index]);
+            return;
         }
+
+        index = getBigone(rs.sum);
+        if (index != -1) {
+            makeAnswer(handler, "命中最多：" + qa.getAns()[index], qa.getAns()[index]);
+            return;
+        }
+
+
+        makeMessage(handler, "无辅助提示！");
     }
 
-    private static int getZeroone(int[] sum) {
+    public static int getZeroone(int[] sum) {
         int index = -1, count = -1;
         for (int i = 0; i < sum.length; i ++) {
             if (sum[i] <= 0 ) {
@@ -89,25 +133,27 @@ public class BaiduSearch {
         return index;
     }
 
+    private static void makeAnswer(Handler handler, String s, String ans) {
+        Message m = handler.obtainMessage();
+        m.getData().putString("result", s);
+        m.getData().putString("ans", ans);
+        handler.sendMessage(m);
+    }
+
     private static void makeMessage(Handler handler, String s) {
         Message m = handler.obtainMessage();
         m.getData().putString("result", s);
         handler.sendMessage(m);
     }
 
-    private static void makeHint(Handler handler, String path) {
+    private static void makeHint(Handler handler, String path, String [] ans) {
         Message m = handler.obtainMessage();
         m.getData().putString("path", path);
+        m.getData().putCharSequenceArray("ans", ans);
         handler.sendMessage(m);
     }
 
-    private static void makeToast(Handler handler, String t) {
-        Message m = handler.obtainMessage();
-        m.getData().putString("toast", t);
-        handler.sendMessage(m);
-    }
-
-    static ResultSum searchResult(QandA qa) throws IOException {
+    public static ResultSum searchResult(QandA qa) throws IOException {
         ResultSum rs = new ResultSum(qa);
         String path = "http://m.baidu.com/s?word=" + URLEncoder.encode(qa.getQuestion(), "UTF-8");
         rs.path = path;
@@ -204,11 +250,11 @@ public class BaiduSearch {
         return rsb.toString();
     }
 
-    private static int getBigone(int[] allsum) {
+    public static int getBigone(int[] allsum) {
         int index = 0;
         int a = allsum[0];
         for (int i = 1; i < allsum.length; i++) {
-            if (allsum[i] == a)
+            if (allsum[i] == a && allsum[i] != 0)
                 return -1;
 
             if (allsum[i] > a) {
@@ -245,13 +291,15 @@ public class BaiduSearch {
     /**
      * 保存分析结果
      */
-    static class ResultSum {
+    public static class ResultSum {
         public String path; //搜索路径
         public int sum []; //每个答案命中次数
         public int dumpsum [][]; //每个答案中的文字出现的次数
         public int allsum []; //单字出现次数总和
+        public String [] ans;
 
         ResultSum(QandA qa) {
+            ans = qa.getAns();
             sum = new int[qa.getAns().length];
             dumpsum = new int[qa.getAns().length][];
             allsum = new int[qa.getAns().length];

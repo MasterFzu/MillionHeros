@@ -2,10 +2,8 @@ package android.masterfzu.millionheros.hint;
 
 import android.masterfzu.millionheros.TheApp;
 import android.masterfzu.millionheros.util.StringUtil;
-import android.util.Log;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Arrays;
@@ -45,10 +43,19 @@ public class QandA {
             }
 
             StringBuffer qsb = new StringBuffer();
-            for (int i = 0; i <= num; i++)
-                qsb.append(ja.getJSONObject(i).getString("words"));
+            for (int i = 0; i <= num; i++){
+                String s = ja.getJSONObject(i).getString("words");
+                if (s.contains("镖姬线"))
+                    continue;
 
-            result.question = pureQ(qsb.toString());
+                qsb.append(s);
+            }
+
+            String q = qsb.toString();
+            if (StringUtil.isEmpty(q))
+                return null;
+
+            result.question = pureQ(q);
 
             TheApp.LogW(result.toString());
         } catch (Exception e) {
@@ -63,9 +70,9 @@ public class QandA {
         String result = s;
 
         if ((isNum(s.charAt(0)) && s.charAt(1) == '.'))
-            result = s.substring(3);
+            result = s.substring(2);
         else if (isNum(s.charAt(1)) && s.charAt(2) == '.')
-            result = s.substring(4);
+            result = s.substring(3);
 
 //        if (s.indexOf("?") == -1)
 //            return s;

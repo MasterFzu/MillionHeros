@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/hint_layout_height"
-    android:background="#c5000000"
+    android:layout_height="match_parent"
+    android:background="@color/color_background"
     android:orientation="vertical">
 
     <TextView
@@ -23,28 +23,13 @@
         />
 
 
-    <LinearLayout
+    <TextView
+        android:paddingLeft="10dp"
+        android:textSize="15sp"
+        android:textColor="@android:color/white"
+        android:id="@+id/hintBottomText"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/add"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:text="标线开关">
-
-        </Button>
-
-        <Button
-            android:id="@+id/remove"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:text="退出">
-
-        </Button>
-    </LinearLayout>
+        android:layout_height="20dp">
+    </TextView>
 
 </LinearLayout>
