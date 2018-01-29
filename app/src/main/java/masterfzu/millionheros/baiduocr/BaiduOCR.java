@@ -57,7 +57,7 @@ public class BaiduOCR {
              * 线上环境access_token有过期时间， 客户端可自行缓存，过期后重新获取。
              * TODO 输入你的accessToken
              */
-            String accessToken = "24.970ef81daa759bcb20838247cac033e7.2592000.1518747551.282335-10690761";
+            String accessToken = "24.b452843489999c2812d18a10cf1ab3d0.2592000.1518661565.282335-10690761";
             String result = HttpUtil.post(otherHost, accessToken, params);
             System.out.println(result);
 
