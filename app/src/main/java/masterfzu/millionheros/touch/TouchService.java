@@ -1,4 +1,4 @@
-package android.masterfzu.millionheros.touch;
+package masterfzu.millionheros.touch;
 
 import android.app.Service;
 import android.content.Context;
@@ -7,13 +7,13 @@ import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
-import android.masterfzu.millionheros.R;
-import android.masterfzu.millionheros.TheApp;
-import android.masterfzu.millionheros.baiduocr.BaiduOCR;
-import android.masterfzu.millionheros.hint.BaiduSearch;
-import android.masterfzu.millionheros.hint.QandA;
-import android.masterfzu.millionheros.util.Counter;
-import android.masterfzu.millionheros.util.StringUtil;
+import masterfzu.millionheros.R;
+import masterfzu.millionheros.TheApp;
+import masterfzu.millionheros.baiduocr.BaiduOCR;
+import masterfzu.millionheros.hint.BaiduSearch;
+import masterfzu.millionheros.hint.QandA;
+import masterfzu.millionheros.util.Counter;
+import masterfzu.millionheros.util.StringUtil;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
@@ -24,7 +24,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -42,12 +41,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
-import java.util.List;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
@@ -59,14 +54,11 @@ import io.reactivex.schedulers.Schedulers;
 public class TouchService extends Service {
 
     private static final String TAG = "TouchService";
-    public static final int TOUCHER_WID = 200;
-    public static final int TOUCHER_HEI = 200;
     public static int mYUPLINE = 243;
     public static int mYDONWLINE = 1159;
 
-    ConstraintLayout toucherLayout;
     LinearLayout upLine, downLine, topLayout;
-    WindowManager.LayoutParams params, upLineP, downLineP, hintLayoutParams;
+    WindowManager.LayoutParams upLineP, downLineP, hintLayoutParams;
     WindowManager windowManager;
     LinearLayout hintlayout;
 
@@ -136,7 +128,6 @@ public class TouchService extends Service {
         addHintLayout();
         addUpHintLine();
         addDownHintLine();
-//        addToucher();
         addToplayout();
     }
 
@@ -224,63 +215,6 @@ public class TouchService extends Service {
         Log.i(TAG, "virtual displayed");
     }
 
-    private void addToucher() {
-        //赋值WindowManager&LayoutParam.
-        params = new WindowManager.LayoutParams();
-        //设置type.系统提示型窗口，一般都在应用程序窗口之上.
-        params.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
-        //设置效果为背景透明.
-        params.format = PixelFormat.RGBA_8888;
-        //设置flags.不可聚焦及不可使用按钮对悬浮窗进行操控.
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-
-        //设置窗口初始停靠位置.
-        params.gravity = Gravity.LEFT | Gravity.TOP;
-        params.x = 0;
-        params.y = 0;
-
-        //设置悬浮窗口长宽数据.
-        params.width = TOUCHER_WID;
-        params.height = TOUCHER_HEI;
-
-        LayoutInflater inflater = LayoutInflater.from(getApplication());
-        //获取浮动窗口视图所在布局.
-        toucherLayout = (ConstraintLayout) inflater.inflate(R.layout.toucherlayout, null);
-        //添加toucherlayout
-        windowManager.addView(toucherLayout, params);
-
-        //主动计算出当前View的宽高信息.
-        toucherLayout.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-
-        //用于检测状态栏高度.
-        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resourceId > 0) {
-            statusBarHeight = getResources().getDimensionPixelSize(resourceId);
-        }
-        Log.i(TAG, "状态栏高度为:" + statusBarHeight);
-
-        toucherLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                showMe();
-                rxAction();
-            }
-
-        });
-
-        toucherLayout.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    params.x = (int) event.getRawX();
-                    params.y = (int) event.getRawY() - statusBarHeight;
-                    windowManager.updateViewLayout(toucherLayout, params);
-                }
-                return false;
-            }
-        });
-    }
-
     private void rxAction() {
         final String c = "rxAction";
         Counter.letsgo(c);
@@ -332,28 +266,15 @@ public class TouchService extends Service {
                         hintWeb.loadUrl(resultSum.path);
                         hintView.setText("完成！" + Counter.spendS(c));
                         hintView.setText(BaiduSearch.getHintIfCatch(resultSum));
-//                        hintView.setText("识图成功!!!");
                     }
                 }, new Consumer<Throwable>() {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
                         Log.e("RXACTION", "sub-error, " + Thread.currentThread().getName());
-                        hintView.setText("失败！" + Counter.spendS(c));
+                        hintView.setText("失败！请重试！" + Counter.spendS(c));
                         Log.e("RXJAVA", throwable.getMessage());
                     }
                 });
-    }
-
-    private void showMe() {
-        final byte [] img = getCapture();
-
-        if (img != null || img.length > 0) {
-            hintView.setText("截图成功");
-//            hintView.loadData("截图成功", "text/html", "UTF-8");
-            BaiduSearch.search(img, mHandler);
-        } else
-            hintView.setText("!!!!!!截图失败，马上重试!!!!!!!");
-//        hintView.loadData("!!!!!!截图失败，马上重试!!!!!!!", "text/html", "UTF-8");
     }
 
     private void addHintLayout() {
@@ -406,8 +327,7 @@ public class TouchService extends Service {
                 }
             }
         });
-//        hintWeb.getSettings().setUseWideViewPort(true);
-        hintWeb.loadUrl("http://m.baidu.com/s?from=100925f");
+        hintWeb.loadUrl("http://m.baidu.com");
 //        hintWeb.loadDataWithBaseURL(null,"### 长按此处退出 ~ 点小猪进行提示 ### \n\n 移动标线确保上下两条线内只有问题与答案 \n 截屏前最好关闭标线", "text/html", "UTF-8", null);
         hintView.setText("# 移动标线确保上下两条线内只有问题与答案 #");
     }
@@ -567,9 +487,6 @@ public class TouchService extends Service {
 
     @Override
     public void onDestroy() {
-        if (toucherLayout != null) {
-            windowManager.removeView(toucherLayout);
-        }
         if (hintlayout != null) {
             windowManager.removeView(hintlayout);
         }

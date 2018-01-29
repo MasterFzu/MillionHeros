@@ -1,4 +1,4 @@
-package android.masterfzu.millionheros.util;
+package masterfzu.millionheros.util;
 
 import java.util.HashMap;
 import java.util.Map;

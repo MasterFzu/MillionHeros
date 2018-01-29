@@ -1,10 +1,6 @@
-package android.masterfzu.millionheros.baiduocr;
+package masterfzu.millionheros.baiduocr;
 
-import android.app.Service;
-import android.masterfzu.millionheros.util.Counter;
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
+import masterfzu.millionheros.util.Counter;
 
 import java.net.URLEncoder;
 

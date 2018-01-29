@@ -1,4 +1,4 @@
-package android.masterfzu.millionheros;
+package masterfzu.millionheros;
 
 import android.app.Application;
 import android.content.Intent;

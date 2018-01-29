@@ -1,4 +1,4 @@
-package android.masterfzu.millionheros.util;
+package masterfzu.millionheros.util;
 
 /**
  * Created by zhengsiyuan on 2018/1/16.

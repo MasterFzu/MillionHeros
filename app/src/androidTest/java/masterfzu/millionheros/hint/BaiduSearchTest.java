@@ -1,12 +1,10 @@
-package android.masterfzu.millionheros.hint;
+package masterfzu.millionheros.hint;
 
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.IOException;
 
 import static org.junit.Assert.assertNotNull;
 

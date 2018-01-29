@@ -1,7 +1,7 @@
-package android.masterfzu.millionheros.hint;
+package masterfzu.millionheros.hint;
 
-import android.masterfzu.millionheros.TheApp;
-import android.masterfzu.millionheros.util.StringUtil;
+import masterfzu.millionheros.TheApp;
+import masterfzu.millionheros.util.StringUtil;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

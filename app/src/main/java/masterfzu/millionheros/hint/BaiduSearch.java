@@ -1,10 +1,6 @@
-package android.masterfzu.millionheros.hint;
+package masterfzu.millionheros.hint;
 
-import android.masterfzu.millionheros.TheApp;
-import android.masterfzu.millionheros.baiduocr.BaiduOCR;
-import android.masterfzu.millionheros.util.StringUtil;
-import android.os.Handler;
-import android.os.Message;
+import masterfzu.millionheros.TheApp;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -21,46 +17,6 @@ import java.util.regex.Pattern;
  * 识图-解析问题与答案-搜索-分析搜索结果
  */
 public class BaiduSearch {
-
-    public static void search(final byte [] img, final Handler handler) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    makeMessage(handler, "开始识图……");
-
-                    String s = BaiduOCR.doOCR(img);
-                    if (StringUtil.isEmpty(s)) {
-                        makeMessage(handler, "!!!识图失败，马上重试!!!");
-                        return;
-                    }
-
-                    QandA qa = QandA.format(s);
-
-                    if (qa == null) {
-                        makeMessage(handler, "!!!无法识别问题，可以尝试重试!!!");
-                        return;
-                    }
-
-                    makeMessage(handler, "识图成功，问题：" + qa.getQuestion());
-
-                    ResultSum rs = searchResult(qa);
-                    makeHint(handler, rs.path, qa.getAns());
-
-                    makeToastIfCatch(handler, qa, rs);
-
-//                    String result = prettyOut(qa, rs);
-//                    Log.w("search", result);
-//
-//                    makeMessage(handler, result);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    makeMessage(handler, "Something Error!!!");
-                }
-            }
-        }).start();
-
-    }
 
     public static boolean allZero(int [] sum) {
         boolean allzero = true; //是否无精确匹配
@@ -94,30 +50,6 @@ public class BaiduSearch {
         return "无辅助提示！";
     }
 
-    private static void makeToastIfCatch(Handler handler, QandA qa, ResultSum rs) {
-        boolean allzero = allZero(rs.sum);
-
-        if (allzero) {
-            makeMessage(handler, "无辅助提示！");
-            return;
-        }
-
-
-        int index = getZeroone(rs.sum);
-        if (index != -1) {
-            makeAnswer(handler, "唯一未出现：" + qa.getAns()[index], qa.getAns()[index]);
-            return;
-        }
-
-        index = getBigone(rs.sum);
-        if (index != -1) {
-            makeAnswer(handler, "命中最多：" + qa.getAns()[index], qa.getAns()[index]);
-            return;
-        }
-
-
-        makeMessage(handler, "无辅助提示！");
-    }
 
     public static int getZeroone(int[] sum) {
         int index = -1, count = -1;
@@ -133,25 +65,6 @@ public class BaiduSearch {
         return index;
     }
 
-    private static void makeAnswer(Handler handler, String s, String ans) {
-        Message m = handler.obtainMessage();
-        m.getData().putString("result", s);
-        m.getData().putString("ans", ans);
-        handler.sendMessage(m);
-    }
-
-    private static void makeMessage(Handler handler, String s) {
-        Message m = handler.obtainMessage();
-        m.getData().putString("result", s);
-        handler.sendMessage(m);
-    }
-
-    private static void makeHint(Handler handler, String path, String [] ans) {
-        Message m = handler.obtainMessage();
-        m.getData().putString("path", path);
-        m.getData().putCharSequenceArray("ans", ans);
-        handler.sendMessage(m);
-    }
 
     public static ResultSum searchResult(QandA qa) throws IOException {
         ResultSum rs = new ResultSum(qa);

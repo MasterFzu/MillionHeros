@@ -1,7 +1,7 @@
-package android.masterfzu.millionheros;
+package masterfzu.millionheros;
 
 import android.content.Context;
-import android.masterfzu.millionheros.hint.QandA;
+import masterfzu.millionheros.hint.QandA;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
@@ -24,7 +24,7 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("android.masterfzu.millionheros", appContext.getPackageName());
+        assertEquals("MasterFzu.MillionHeros", appContext.getPackageName());
     }
 
     @Test

@@ -1,4 +1,4 @@
-package android.masterfzu.millionheros.baiduocr;
+package masterfzu.millionheros.baiduocr;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
